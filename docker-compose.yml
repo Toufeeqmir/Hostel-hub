@@ -1,0 +1,22 @@
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: stayflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stayflow_user
+      POSTGRES_PASSWORD: stayflow_local_dev_password
+      POSTGRES_DB: stayflow_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - stayflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stayflow_user -d stayflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  stayflow_postgres_data:
