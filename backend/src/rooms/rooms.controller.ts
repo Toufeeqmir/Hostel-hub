@@ -8,6 +8,7 @@ import {
   Body,
   Param,
   Req,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -16,6 +17,7 @@ import type { Request } from 'express';
 import { RoomsService } from './rooms.service.js';
 import { CreateRoomDto } from './dto/create-room.dto.js';
 import { UpdateRoomDto } from './dto/update-room.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { OrganizationMemberGuard } from '../auth/guards/organization-member.guard.js';
@@ -52,15 +54,17 @@ export class RoomsController {
     );
   }
 
-  // GET ALL ROOMS
+  // GET ALL ROOMS WITH PAGINATION AND FILTERING
   @Get()
   findAll(
     @Req() req: AuthenticatedRequest,
     @Param('propertyId') propertyId: string,
+    @Query() query: PaginationQueryDto,
   ) {
     return this.roomsService.findAll(
       req.organization.id,
       propertyId,
+      query,
     );
   }
 
@@ -80,7 +84,6 @@ export class RoomsController {
     );
   }
 
-
   // DEACTIVATE ROOM
   @Delete(':roomId')
   deactivate(
@@ -94,5 +97,4 @@ export class RoomsController {
       roomId,
     );
   }
-
 }
