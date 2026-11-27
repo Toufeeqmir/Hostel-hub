@@ -11,6 +11,7 @@ import { OrganizationsModule } from './organizations/organization.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
 import { RoomsModule } from './rooms/room.module.js';
 import { BedsModule } from './beds/beds.module.js';
+import { TenantsModule } from './tenants/tenants.module.js';
 
 export const { ObserveModule, ObserveInstrument } =
   createObserveModule();
@@ -34,6 +35,7 @@ export const { ObserveModule, ObserveInstrument } =
     PropertiesModule,
     RoomsModule,
     BedsModule,
+    TenantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
