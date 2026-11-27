@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreatePropertyDto } from './dto/create-property.dto.js';
 import { UpdatePropertyDto } from './dto/update-property.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Injectable()
 export class PropertiesService {
@@ -42,11 +43,82 @@ export class PropertiesService {
     };
   }
 
-  async findAll(organizationId: string) {
-    return this.prisma.property.findMany({
-      where: { organizationId, isActive: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(
+    organizationId: string,
+    query: PaginationQueryDto,
+  ) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    // Validate property status filter
+    if (
+      query.status &&
+      !['active', 'inactive'].includes(query.status.toLowerCase())
+    ) {
+      throw new BadRequestException(
+        'Status must be either active or inactive',
+      );
+    }
+
+    const isActive =
+      query.status?.toLowerCase() === 'inactive' ? false : true;
+
+    const where = {
+      organizationId,
+      isActive,
+      ...(query.search
+        ? {
+            OR: [
+              {
+                name: {
+                  contains: query.search,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                city: {
+                  contains: query.search,
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                state: {
+                  contains: query.search,
+                  mode: 'insensitive' as const,
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [totalRecords, properties] = await Promise.all([
+      this.prisma.property.count({ where }),
+
+      this.prisma.property.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: query.sortOrder || 'desc',
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    return {
+      properties,
+      pagination: {
+        totalRecords,
+        currentPage: page,
+        pageSize: limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async findOne(organizationId: string, propertyId: string) {

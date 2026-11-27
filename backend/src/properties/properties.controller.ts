@@ -1,20 +1,21 @@
 
 import {
   Controller,
-  Post,
   Get,
+  Post,
   Body,
   Patch,
-  Delete,
   Param,
-  UseGuards,
+  Delete,
   Req,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 
 import { PropertiesService } from './properties.service.js';
 import { CreatePropertyDto } from './dto/create-property.dto.js';
-
 import { UpdatePropertyDto } from './dto/update-property.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { OrganizationMemberGuard } from '../auth/guards/organization-member.guard.js';
@@ -26,56 +27,65 @@ export class PropertiesController {
     private readonly propertiesService: PropertiesService,
   ) {}
 
+  // Create a new property
   @Post()
-  async create(
-    @Req() request: any,
-    @Body() dto: CreatePropertyDto,
+  create(
+    @Req() req: any,
+    @Body() createPropertyDto: CreatePropertyDto,
   ) {
     return this.propertiesService.create(
-      request.organization.id,
-      dto,
+      req.organization.id,
+      createPropertyDto,
     );
   }
 
+  // Get all properties with pagination and filtering
   @Get()
-  async findAll(@Req() request: any) {
+  findAll(
+    @Req() req: any,
+    @Query() query: PaginationQueryDto,
+  ) {
     return this.propertiesService.findAll(
-      request.organization.id,
+      req.organization.id,
+      query,
     );
   }
 
+  // Get a single property
   @Get(':propertyId')
-  async findOne(
-    @Req() request: any,
+  findOne(
+    @Req() req: any,
     @Param('propertyId') propertyId: string,
   ) {
     return this.propertiesService.findOne(
-      request.organization.id,
+      req.organization.id,
       propertyId,
     );
   }
 
+  // Update property details
   @Patch(':propertyId')
-async update(
-  @Req() request: any,
-  @Param('propertyId') propertyId: string,
-  @Body() dto: UpdatePropertyDto,
-) {
-  return this.propertiesService.update(
-    request.organization.id,
-    propertyId,
-    dto,
-  );
-}
+  update(
+    @Req() req: any,
+    @Param('propertyId') propertyId: string,
+    @Body() updatePropertyDto: UpdatePropertyDto,
+  ) {
+    return this.propertiesService.update(
+      req.organization.id,
+      propertyId,
+      updatePropertyDto,
+    );
+  }
 
-@Delete(':propertyId')
-async deactivate(
-   @Req() request: any,
-   @Param('propertyId') propertyId: string,
-){
-   return this.propertiesService.deactivate(
-     request.organization.id,
-     propertyId,
-   );
-}
+  // Deactivate a property
+  @Delete(':propertyId')
+  deactivate(
+    @Req() req: any,
+    @Param('propertyId') propertyId: string,
+  ) {
+    return this.propertiesService.deactivate(
+      req.organization.id,
+      propertyId,
+    );
+  }
 }
