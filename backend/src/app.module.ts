@@ -13,6 +13,7 @@ import { RoomsModule } from './rooms/room.module.js';
 import { BedsModule } from './beds/beds.module.js';
 import { TenantsModule } from './tenants/tenants.module.js';
 import { OccupanciesModule } from './occupancies/occupancies.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 
 export const { ObserveModule, ObserveInstrument } =
   createObserveModule();
@@ -38,6 +39,7 @@ export const { ObserveModule, ObserveInstrument } =
     BedsModule,
     TenantsModule,
     OccupanciesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
