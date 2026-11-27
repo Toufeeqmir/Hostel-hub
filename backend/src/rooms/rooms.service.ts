@@ -3,11 +3,13 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateRoomDto } from './dto/create-room.dto.js';
 import { UpdateRoomDto } from './dto/update-room.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Injectable()
 export class RoomsService {
@@ -62,10 +64,11 @@ export class RoomsService {
     };
   }
 
-  // GET ALL ROOMS
+  // GET ALL ROOMS WITH PAGINATION AND FILTERING
   async findAll(
     organizationId: string,
     propertyId: string,
+    query: PaginationQueryDto,
   ) {
     const property = await this.prisma.property.findFirst({
       where: {
@@ -79,19 +82,69 @@ export class RoomsService {
       throw new NotFoundException('Active property not found');
     }
 
-    const rooms = await this.prisma.room.findMany({
-      where: {
-        propertyId: property.id,
-      },
-      orderBy: {
-        roomNumber: 'asc',
-      },
-    });
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const validStatuses = [
+      'AVAILABLE',
+      'OCCUPIED',
+      'MAINTENANCE',
+      'INACTIVE',
+    ];
+
+    const status = query.status?.toUpperCase();
+
+    if (status && !validStatuses.includes(status)) {
+      throw new BadRequestException(
+        'Invalid room status. Use AVAILABLE, OCCUPIED, MAINTENANCE or INACTIVE',
+      );
+    }
+
+    const where = {
+      propertyId: property.id,
+      ...(status ? { status: status as
+        | 'AVAILABLE'
+        | 'OCCUPIED'
+        | 'MAINTENANCE'
+        | 'INACTIVE' } : {}),
+      ...(query.search
+        ? {
+            roomNumber: {
+              contains: query.search,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+    };
+
+    const [totalRecords, rooms] = await Promise.all([
+      this.prisma.room.count({ where }),
+
+      this.prisma.room.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          roomNumber: query.sortOrder || 'asc',
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalRecords / limit);
 
     return {
       propertyId: property.id,
-      totalRooms: rooms.length,
+      totalRooms: totalRecords,
       rooms,
+      pagination: {
+        totalRecords,
+        currentPage: page,
+        pageSize: limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
     };
   }
 
