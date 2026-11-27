@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+enum PropertyType {
+  BOYS_HOSTEL
+  GIRLS_HOSTEL
+  CO_LIVING
+  PG
+  OTHER
+}
+
+enum GenderType {
+  MALE
+  FEMALE
+  ANY
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum BedStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum TenantGender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum OccupancyStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// ==========================================
+// USER & ORGANIZATION MANAGEMENT
+// ==========================================
+
+model User {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  isActive     Boolean @default(true)
+
+  memberships OrganizationMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Organization {
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  isActive Boolean @default(true)
+
+  members    OrganizationMember[]
+  properties Property[]
+  tenants    Tenant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid())
+  userId         String
+  organizationId String
+  role           OrganizationRole @default(STAFF)
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// ==========================================
+// PROPERTY MANAGEMENT
+// ==========================================
+
+model Property {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  address        String
+  city           String
+  state          String
+  propertyType   PropertyType
+  latitude       Float?
+  longitude      Float?
+  isActive       Boolean      @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rooms        Room[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// ==========================================
+// ROOM MANAGEMENT
+// ==========================================
+
+model Room {
+  id            String     @id @default(uuid())
+  propertyId    String
+  roomNumber    String
+  floor         Int?
+  capacity      Int
+  allowedGender GenderType @default(ANY)
+  status        RoomStatus @default(AVAILABLE)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  beds     Bed[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([propertyId, roomNumber])
+  @@index([propertyId])
+}
+
+// ==========================================
+// BED MANAGEMENT
+// ==========================================
+
+model Bed {
+  id        String    @id @default(uuid())
+  roomId    String
+  bedNumber String
+  status    BedStatus @default(AVAILABLE)
+
+  room        Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  occupancies Occupancy[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roomId, bedNumber])
+  @@index([roomId])
+}
+
+// ==========================================
+// TENANT MANAGEMENT
+// ==========================================
+
+model Tenant {
+  id             String        @id @default(uuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String
+  gender         TenantGender?
+  dateOfBirth    DateTime?
+  address        String?
+  emergencyName  String?
+  emergencyPhone String?
+  isActive       Boolean       @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  occupancies  Occupancy[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, phone])
+  @@index([name])
+}
+
+// ==========================================
+// BED OCCUPANCY & ALLOCATION HISTORY
+// ==========================================
+
+model Occupancy {
+  id       String          @id @default(uuid())
+  tenantId String
+  bedId    String
+  status   OccupancyStatus @default(ACTIVE)
+
+  checkInDate  DateTime  @default(now())
+  checkOutDate DateTime?
+
+  monthlyRent     Decimal @db.Decimal(10, 2)
+  securityDeposit Decimal @default(0) @db.Decimal(10, 2)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  bed    Bed    @relation(fields: [bedId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([bedId, status])
+}

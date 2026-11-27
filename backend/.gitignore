@@ -1,0 +1,21 @@
+# Environment files (all project folders)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+**/build/
+
+# Prisma generated client
+backend/src/generated/prgenerated/prisma/
+generated/prisma/
+# Local database and backup files
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
